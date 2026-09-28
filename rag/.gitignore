@@ -1,0 +1,7 @@
+.env
+legal/
+__pycache__
+
+db_manager.py
+
+Database_content
