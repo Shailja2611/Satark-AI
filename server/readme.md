@@ -1,146 +1,104 @@
-# /users/register
+# Satark AI API Server
 
-This endpoint registers a new user.
+This directory contains the Node.js and Express API used by Satark AI. It connects to MongoDB, validates Auth0 bearer tokens for protected routes, stores user/search data, and proxies document-generation requests to Langflow.
 
-## Method
-POST
+The server is separate from the Python RAG services in `rag/` and `suraksha_setu/`.
 
-## Request Body
-```json
-{
-  "fullname": {
-    "firstname": "string",
-    "lastname": "string"
-  },
-  "email": "string (valid email format)",
-  "password": "string (min length: 6)"
-}
+## Requirements
+
+- Node.js 18 or newer
+- npm
+- MongoDB
+- Auth0 API/application configuration
+- A Langflow endpoint and Astra token if document generation is used
+
+## Setup
+
+```bash
+cd server
+npm install
 ```
 
-• All fields are required.  
-• The user's password is hashed before storing.
+Create `server/.env`:
 
-## Response
-• On success (201): Returns a JSON containing a token and user details.  
-• On validation error (400): Returns an array of error messages.
-
-## Example Response
-**Success (201)**
-```json
-{
-  "token": "string",
-  "user": {
-    "id": 123,
-    "fullname": {
-      "firstname": "John",
-      "lastname": "Doe"
-    },
-    "email": "john@example.com"
-  }
-}
-```
-**Error (400)**
-```json
-[
-  "Invalid email format",
-  "Password length must be at least 6"
-]
+```env
+PORT=3000
+DB_CONNECT=mongodb://127.0.0.1:27017/satark-ai
+AUTH0_DOMAIN=your-tenant.us.auth0.com
+AUTH0_AUDIENCE=https://api.satark.ai
+LANGFLOW_API_URL=https://your-langflow-endpoint
+ASTRA_TOKEN=your-astra-token
 ```
 
-# /users/login
+`DB_CONNECT`, `AUTH0_DOMAIN`, and `AUTH0_AUDIENCE` are required for the API and protected routes. `LANGFLOW_API_URL` and `ASTRA_TOKEN` are required by `/proxy/generate`.
 
-## Method
-POST
+## Run
 
-## Request Body
-```json
-{
-  "email": "string (valid email format)",
-  "password": "string (min length: 6)"
-}
+The package currently provides a development script but no `start` script:
+
+```bash
+node server.js       # Start the API directly
+npm run dev           # Start with nodemon when nodemon is available
 ```
 
-## Response
-• On success (200): Returns a JSON containing a token and user details  
-• On authentication error (401): Returns an error message
+The default port is `3000`. The root endpoint is available at `http://localhost:3000/`.
 
-## Example Response
-**Success (200)**
-```json
-{
-  "token": "string",
-  "user": {
-    "id": 123,
-    "fullname": {
-      "firstname": "Jane",
-      "lastname": "Doe"
-    },
-    "email": "jane@example.com"
-  }
-}
-```
-**Error (401)**
-```json
-{
-  "message": "Invalid email or password"
-}
+## Mounted Endpoints
+
+### Public
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/` | Basic server response |
+| POST | `/proxy/generate` | Forwards a document-generation request to Langflow |
+
+The proxy accepts the JSON request body and an optional `stream` query parameter. It forwards the `Authorization` header generated from `ASTRA_TOKEN` to Langflow.
+
+### Authenticated
+
+Send an Auth0 access token in the header:
+
+```http
+Authorization: Bearer <access-token>
 ```
 
-# /users/profile
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/authorized` | Authenticated smoke test |
+| GET | `/users/profile` | Find or create the MongoDB user profile from Auth0 claims |
+| POST | `/users/logout` | Add the bearer token to the blacklist and clear the cookie |
+| POST | `/legal/search` | Search legal knowledge through the configured RAG bridge |
+| GET | `/legal/history` | Return the authenticated user's latest legal searches |
+| GET | `/legal/history/:id` | Return one legal search record |
 
-## Method
-GET
+Example legal search request:
 
-## Authentication
-Requires Bearer token in Authorization header
-
-## Response
-• On success (200): Returns user profile details  
-• On unauthorized (401): Returns authentication error
-
-## Example Response
-**Success (200)**
-```json
-{
-  "user": {
-    "id": 123,
-    "fullname": {
-      "firstname": "Jane",
-      "lastname": "Doe"
-    },
-    "email": "jane@example.com"
-  }
-}
-```
-**Error (401)**
-```json
-{
-  "message": "Unauthorized access"
-}
+```bash
+curl -X POST http://localhost:3000/legal/search \
+  -H 'Authorization: Bearer <access-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"What is the procedure for preserving evidence?"}'
 ```
 
-# /users/logout
+## Project Structure
 
-## Method
-POST
-
-## Authentication
-Requires Bearer token in Authorization header
-
-## Response
-• On success (200): Returns logout confirmation  
-• On unauthorized (401): Returns authentication error
-
-## Example Response
-**Success (200)**
-```json
-{
-  "message": "Successfully logged out"
-}
+```text
+server/
+├── app.js                 Express middleware and mounted routes
+├── server.js              HTTP server and Langflow proxy
+├── controllers/           Request handlers
+├── db/                    MongoDB connection
+├── middlewares/           Auth0 and token blacklist checks
+├── models/                Mongoose models
+├── routes/                Express route definitions
+└── services/              Reusable server services
 ```
-**Error (401)**
-```json
-{
-  "message": "Unauthorized access"
-}
-```
+
+## Related Services
+
+The client also calls the Python services directly:
+
+- `rag/main.py`: legal QA at `/qa`, investigation analysis at `/investigation`, and status at `/health`.
+- `suraksha_setu/main.py`: tactical, command, security, evacuation, and evidence endpoints.
+
+Install and run those services using their own `requirements.txt` files and the `GROQ_API_KEY` environment variable.
