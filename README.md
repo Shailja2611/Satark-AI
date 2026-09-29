@@ -196,12 +196,16 @@ python main.py
 
 <table>
   <tr>
+    <td><img width="1512" alt="Satark AI product banner" src="assets/hero.png" /></td>
     <td><img width="1512" alt="Satark AI feature overview" src="assets/powerfulFeatures.png" /></td>
-    <td><img width="1512" alt="Vivad Mitra investigation engine" src="assets/detectiveEngine.png" /></td>
   </tr>
   <tr>
+    <td><img width="1512" alt="Vivad Mitra investigation engine" src="assets/detectiveEngine.png" /></td>
     <td><img width="1512" alt="Kanoon Patr document generator" src="assets/documentGenerator.png" /></td>
-    <td><img width="1512" alt="Satark AI product banner" src="assets/banner.png" /></td>
+  </tr>
+  <tr>
+    <td><img width="1512" alt="Satark AI product banner" src="assets/legalKnowledge.png" /></td>
+    <td><img width="1512" alt="Satark AI feature overview" src="assets/surakshaSetu.png" /></td>
   </tr>
 </table>
 
